@@ -17,9 +17,9 @@ public class Session {
 
     private Long timestamp;
 
-    private Date createDate;
+    private Date createdAt;
 
-    private Date updateDate;
+    private Date updatedAt;
 
     public void setRawResponse(String rawResponse) {
         this.rawResponse = rawResponse;
@@ -53,20 +53,20 @@ public class Session {
         this.timestamp = timestamp;
     }
 
-    public Date getCreateDate() {
-        return createDate;
+    public Date getCreatedAt() {
+        return createdAt;
     }
 
-    public void setCreateDate(Date createDate) {
-        this.createDate = createDate;
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
     }
 
-    public Date getUpdateDate() {
-        return updateDate;
+    public Date getUpdatedAt() {
+        return updatedAt;
     }
 
-    public void setUpdateDate(Date updateDate) {
-        this.updateDate = updateDate;
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public String getId() {

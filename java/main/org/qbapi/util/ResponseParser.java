@@ -11,8 +11,6 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Locale;
-import java.util.TimeZone;
 
 /**
  * Created by chazz on 6/10/2015.
@@ -22,19 +20,40 @@ public class ResponseParser {
 	private final static String ATTR_APPLICATION_ID = "application_id";
 	private final static String ATTR_CREATED_AT = "created_at";
 	private final static String ATTR_UPDATED_AT = "updated_at";
-	private final static String ATTR_ID = "_id";
+	private final static String ATTR_ID = "id";
 	private final static String ATTR_TIMESTAMP = "ts";
 	private final static String ATTR_TOKEN = "token";
+    private final static String ATTR_EMAIL = "email";
+    private final static String ATTR_FULL_NAME = "full_name";
+    private static final String ATTR_LOGIN = "login";
 
-	public static final Dialog toDialog(String jsonResponse) {
+
+    public static final Dialog toDialog(String jsonResponse) {
 
 		return null;
 	}
 
-	public static final ApiUser toApiUser(String rawResponse) {
+	public static final ApiUser toApiUser(String rawResponse) throws QBException {
 		ApiUser apiUser = new ApiUser();
 
 		apiUser.setRawResponse(rawResponse);
+
+        try {
+            JSONObject jsonResponse = new JSONObject(rawResponse);
+            if (jsonResponse.has("user")) {
+                JSONObject userJson = jsonResponse.getJSONObject("user");
+
+                apiUser.setEmail(userJson.getString(ATTR_EMAIL));
+                apiUser.setId(userJson.getLong(ATTR_ID));
+                apiUser.setFullName(userJson.getString(ATTR_FULL_NAME));
+                apiUser.setLogin(userJson.getString(ATTR_LOGIN));
+                apiUser.setCreatedAt(parseDate(userJson.getString(ATTR_CREATED_AT)));
+                apiUser.setUpdatedAt(parseDate(userJson.getString(ATTR_UPDATED_AT)));
+            }
+
+        } catch (JSONException e) {
+            return null;
+        }
 
 		return apiUser;
 	}
@@ -51,8 +70,8 @@ public class ResponseParser {
 				session.setApplicationId(sessionJson.getLong(ATTR_APPLICATION_ID));
 				session.setId(sessionJson.getString(ATTR_ID));
 				session.setTimestamp(sessionJson.getLong(ATTR_TIMESTAMP));
-				session.setCreateDate(parseDate(sessionJson.getString(ATTR_CREATED_AT)));
-				session.setUpdateDate(parseDate(sessionJson.getString(ATTR_UPDATED_AT)));
+				session.setCreatedAt(parseDate(sessionJson.getString(ATTR_CREATED_AT)));
+				session.setUpdatedAt(parseDate(sessionJson.getString(ATTR_UPDATED_AT)));
 				session.setToken(sessionJson.getString(ATTR_TOKEN));
 
 			} else {

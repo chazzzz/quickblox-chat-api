@@ -2,7 +2,6 @@ package org.qbapi.service.impl;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.omg.CORBA.UNKNOWN;
 import org.qbapi.bean.ApiUser;
 import org.qbapi.bean.Dialog;
 import org.qbapi.bean.Session;
@@ -25,7 +24,7 @@ public class QBServiceImpl implements QBService {
 
 	private final static int DIALOG_TYPE_PRIVATE = 3;
 
-	public Session createSession(ApiUser apiUser)  {
+	public Session createSession(ApiUser apiUser) throws QBException {
 
 		long timestamp = TimeUtil.getUnixTime();
 		double nonce = NumberUtil.randomNonce();
@@ -43,12 +42,13 @@ public class QBServiceImpl implements QBService {
 		params.put("nonce", ""+(int)nonce);
 
 		if (apiUser != null) {
-			signatureBody
-					.append("&user[login]=").append(apiUser.getLogin())
-					.append("&user[password]=").append(apiUser.getPassword());
-
+			signatureBody.append("&user[login]=").append(apiUser.getLogin());
 			params.put("user[login]", apiUser.getLogin());
-			params.put("user[password]", apiUser.getPassword());
+
+			if (!StringUtil.isEmpty(apiUser.getPassword())) {
+				signatureBody.append("&user[password]=").append(apiUser.getPassword());
+				params.put("user[password]", apiUser.getPassword());
+			}
 		}
 
 		try {
@@ -60,12 +60,30 @@ public class QBServiceImpl implements QBService {
 			return ResponseParser.toSession(responseTxt);
 
 		} catch (Exception e) {
-			return null;
+			throw new QBException(QBException.UKNOWN_ERROR);
 		}
 	}
 
-	public Session createUnauthenticatedSession() {
+	public Session createUnauthenticatedSession() throws QBException {
 		return createSession(null);
+	}
+
+	@Override
+	public ApiUser getApiUserByLogin(String login) throws QBException {
+		Session session = createUnauthenticatedSession();
+
+		final Map<String, String> header = new HashMap<>();
+		header.put("QB-Token", session.getToken());
+
+		try {
+			String responseTxt = HttpUtil.get(getUrl("users/by_login?login=" + login), null, header);
+
+			return ResponseParser.toApiUser(responseTxt);
+
+		} catch (IOException e) {
+			throw new QBException(QBException.UKNOWN_ERROR);
+		}
+
 	}
 
 	private String getUrl(String resource) {
@@ -88,74 +106,87 @@ public class QBServiceImpl implements QBService {
 
 	public ApiUser registerApiUser(ApiUser apiUser) throws QBException {
 
-        Session session = createUnauthenticatedSession();
+		Session session = createUnauthenticatedSession();
 
-        try {
-            final JSONObject userJson = new JSONObject();
-            userJson.put("login", apiUser.getLogin());
-            userJson.put("password", apiUser.getPassword());
-            userJson.put("email", apiUser.getEmail());
-            userJson.put("full_name", apiUser.getFullName());
+		try {
+			final JSONObject userJson = new JSONObject();
+			userJson.put("login", apiUser.getLogin());
+			userJson.put("password", apiUser.getPassword());
+			userJson.put("email", apiUser.getEmail());
+			userJson.put("full_name", apiUser.getFullName());
 
-            final JSONObject jsonPayload = new JSONObject();
-            jsonPayload.put("user", userJson);
+			final JSONObject jsonPayload = new JSONObject();
+			jsonPayload.put("user", userJson);
 
-            final Map<String, String> headers = new HashMap<>();
-            headers.put("QB-Token", session.getToken());
+			final Map<String, String> headers = new HashMap<>();
+			headers.put("QB-Token", session.getToken());
 
-            // execute the request
-            final String responseTxt = HttpUtil.postJson(getUrl("users"), jsonPayload.toString(), headers);
+			// execute the request
+			final String responseTxt = HttpUtil.postJson(getUrl("users"), jsonPayload.toString(), headers);
 
-            return ResponseParser.toApiUser(responseTxt);
+			ApiUser registeredUser = ResponseParser.toApiUser(responseTxt);
+			registeredUser.setIsRegistered(true);
 
-        } catch (JSONException e) {
-            throw new QBException(QBException.UKNOWN_ERROR);
+			return registeredUser;
 
-        } catch (IOException e) {
-            throw new QBException(QBException.UKNOWN_ERROR);
-        }
+		} catch (JSONException e) {
+			throw new QBException(QBException.UKNOWN_ERROR);
 
-        /*
-        final JsonNode responseJson = Json.parse(responseTxt);
-        if (responseJson.has("errors")) {
-            systemLogService.createLog(SystemLogType.DEBUG, "Response has errors...");
+		} catch (IOException e) {
+			throw new QBException(QBException.UKNOWN_ERROR);
+		}
 
-            final JsonNode errorsJson = responseJson.get("errors");
-            if (errorsJson.has("login")) {
-                final Iterator<JsonNode> loginErrors = errorsJson.get("login").iterator();
-                while (loginErrors.hasNext()) {
-                    final String loginError = loginErrors.next().textValue();
-                    if (loginError.equals("has already been taken")) {
-                        systemLogService.createLog(SystemLogType.DEBUG, "This user is already registered to QuickBlox. retrieving details...");
-                        return getApiUserByLogin(user.getQuickBloxLoginName(), sessionToken);
-                    }
-                }
-            }
-        } else {
-            systemLogService.createLog(SystemLogType.DEBUG, "Doesn't have errors...");
-        }
+		/*
+		final JsonNode responseJson = Json.parse(responseTxt);
+		if (responseJson.has("errors")) {
+			systemLogService.createLog(SystemLogType.DEBUG, "Response has errors...");
 
-        final JsonNode responseUserJson = responseJson.get("user");
+			final JsonNode errorsJson = responseJson.get("errors");
+			if (errorsJson.has("login")) {
+				final Iterator<JsonNode> loginErrors = errorsJson.get("login").iterator();
+				while (loginErrors.hasNext()) {
+					final String loginError = loginErrors.next().textValue();
+					if (loginError.equals("has already been taken")) {
+						systemLogService.createLog(SystemLogType.DEBUG, "This user is already registered to QuickBlox. retrieving details...");
+						return getApiUserByLogin(user.getQuickBloxLoginName(), sessionToken);
+					}
+				}
+			}
+		} else {
+			systemLogService.createLog(SystemLogType.DEBUG, "Doesn't have errors...");
+		}
 
-        if (responseUserJson.has("id")) {
-            systemLogService.createLog(SystemLogType.DEBUG, "Returning id = " + responseUserJson.get("id").textValue());
+		final JsonNode responseUserJson = responseJson.get("user");
 
-            return responseUserJson.get("id").longValue();
-        }*/
-    }
+		if (responseUserJson.has("id")) {
+			systemLogService.createLog(SystemLogType.DEBUG, "Returning id = " + responseUserJson.get("id").textValue());
 
-    @Override
-    public void deleteApiUser(ApiUser apiUser) throws QBException {
+			return responseUserJson.get("id").longValue();
+		}*/
+	}
 
-        Session session = createUnauthenticatedSession();
+	@Override
+	public ApiUser deleteApiUser(ApiUser apiUser) throws QBException {
 
-        Map<String, String> headers = new HashMap<>();
-        headers.put("QB-Token", session.getToken());
+		if (apiUser.getId() != null) {
+			Session session = createSession(apiUser);
+			try {
 
-        try {
-            HttpUtil.delete(getUrl("users/" + apiUser.getId()), headers);
-        } catch (IOException e) {
-            throw new QBException(QBException.UKNOWN_ERROR);
-        }
-    }
+				Map<String, String> headers = new HashMap<>();
+				headers.put("QB-Token", session.getToken());
+
+				String responseTxt = HttpUtil.delete(getUrl("users/" + apiUser.getId()), headers);
+
+				apiUser.setRawResponse(responseTxt);
+
+				return apiUser;
+
+			} catch (IOException e) {
+				throw new QBException(QBException.UKNOWN_ERROR);
+			}
+
+		} else {
+			throw new QBException(QBException.UKNOWN_ERROR);
+		}
+	}
 }

@@ -1,5 +1,7 @@
 package org.qbapi.bean;
 
+import java.util.Date;
+
 /**
  * Created by chazz on 6/10/2015.
  */
@@ -14,7 +16,14 @@ public class ApiUser {
     private String email;
 
     private String fullName;
+
+    private Date createdAt;
+
+    private Date updatedAt;
+
     private String rawResponse;
+
+    private boolean isRegistered = false;
 
     public Long getId() {
         return id;
@@ -62,5 +71,29 @@ public class ApiUser {
 
     public void setRawResponse(String rawResponse) {
         this.rawResponse = rawResponse;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Date getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public boolean isRegistered() {
+        return isRegistered;
+    }
+
+    public void setIsRegistered(boolean isRegistered) {
+        this.isRegistered = isRegistered;
     }
 }

@@ -178,7 +178,7 @@ public class HttpUtil {
 		return responseTxt;
 	}
 
-    public static void delete(String url, Map<String, String> headers) throws IOException {
-        sendRequest(METHOD_DELETE, url, null, headers);
+    public static String delete(String url, Map<String, String> headers) throws IOException {
+        return sendRequest(METHOD_DELETE, url, null, headers);
     }
 }
