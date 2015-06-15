@@ -169,9 +169,9 @@ public class HttpUtil {
 		}
 
 		final CloseableHttpClient client = HttpClients.createDefault();
-
 		final InputStream inStream = client.execute(httpPost).getEntity().getContent();
 		final String responseTxt = convertStreamToString(inStream);
+
 
 		inStream.close();
 

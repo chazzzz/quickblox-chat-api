@@ -5,9 +5,9 @@ import java.util.Date;
 /**
  * Created by chazz on 6/10/2015.
  */
-public class Session {
+public class QBSession {
 
-    private String rawResponse;
+    private String rawInfo;
 
     private Long applicationId;
 
@@ -21,12 +21,12 @@ public class Session {
 
     private Date updatedAt;
 
-    public void setRawResponse(String rawResponse) {
-        this.rawResponse = rawResponse;
+    public void setRawInfo(String rawInfo) {
+        this.rawInfo = rawInfo;
     }
 
-    public String getRawResponse() {
-        return rawResponse;
+    public String getRawInfo() {
+        return rawInfo;
     }
 
     public Long getApplicationId() {

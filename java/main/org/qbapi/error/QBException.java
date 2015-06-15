@@ -5,13 +5,24 @@ package org.qbapi.error;
  */
 public class QBException extends Exception {
 
-    public static final int UKNOWN_ERROR = 0;
+    public static final int ERROR_UNKNOWN = 0;
+	public static final int ERROR_JSON = 1;
+	public static final int ERROR_GENERIC = 2;
+	public static final int ERROR_IO = 4;
+	public static final int ERROR_ENCRYPTION = 5;
 
-    private int errorCode;
+	private Exception rootException;
+
+	private int errorCode;
 
     public QBException(int errorCode) {
         this.errorCode = errorCode;
     }
+
+	public QBException(int errorCode, Exception e) {
+		this.errorCode = errorCode;
+		this.rootException = e;
+	}
 
     public int getErrorCode() {
         return errorCode;

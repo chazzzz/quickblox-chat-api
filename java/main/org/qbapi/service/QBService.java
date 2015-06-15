@@ -1,26 +1,26 @@
 package org.qbapi.service;
 
-import org.qbapi.bean.ApiUser;
-import org.qbapi.bean.Dialog;
-import org.qbapi.bean.Session;
+import org.qbapi.bean.QBApiUser;
+import org.qbapi.bean.QBDialog;
+import org.qbapi.bean.QBSession;
 import org.qbapi.error.QBException;
-
-import java.io.IOException;
 
 /**
  * Created by chazz on 6/9/2015.
  */
 public interface QBService {
 
-    Dialog createDialog();
+    QBDialog createDialog(QBApiUser owner, QBApiUser recipient, String className, String direction) throws QBException;
 
-    ApiUser registerApiUser(ApiUser apiUser) throws QBException;
+	QBDialog createDialog(QBApiUser owner, QBApiUser recipient) throws QBException;
 
-    ApiUser deleteApiUser(ApiUser apiUser) throws QBException;
+    QBApiUser registerApiUser(QBApiUser apiUser) throws QBException;
 
-    Session createSession(ApiUser apiUser) throws QBException;
+    QBApiUser deleteApiUser(QBApiUser apiUser) throws QBException;
 
-    Session createUnauthenticatedSession() throws QBException;
+    QBSession createSession(QBApiUser apiUser) throws QBException;
 
-	ApiUser getApiUserByLogin(String login) throws QBException;
+    QBSession createUnauthenticatedSession() throws QBException;
+
+	QBApiUser getApiUserByLogin(String login) throws QBException;
 }

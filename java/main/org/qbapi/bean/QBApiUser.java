@@ -5,7 +5,7 @@ import java.util.Date;
 /**
  * Created by chazz on 6/10/2015.
  */
-public class ApiUser {
+public class QBApiUser {
 
     private Long id;
 
@@ -21,9 +21,7 @@ public class ApiUser {
 
     private Date updatedAt;
 
-    private String rawResponse;
-
-    private boolean isRegistered = false;
+    private String rawInfo;
 
     public Long getId() {
         return id;
@@ -65,12 +63,12 @@ public class ApiUser {
         this.fullName = fullName;
     }
 
-    public String getRawResponse() {
-        return rawResponse;
+    public String getRawInfo() {
+        return rawInfo;
     }
 
-    public void setRawResponse(String rawResponse) {
-        this.rawResponse = rawResponse;
+    public void setRawInfo(String rawInfo) {
+        this.rawInfo = rawInfo;
     }
 
     public Date getCreatedAt() {
@@ -90,10 +88,7 @@ public class ApiUser {
     }
 
     public boolean isRegistered() {
-        return isRegistered;
+        return id != null;
     }
 
-    public void setIsRegistered(boolean isRegistered) {
-        this.isRegistered = isRegistered;
-    }
 }

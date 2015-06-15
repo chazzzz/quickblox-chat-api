@@ -2,15 +2,15 @@ package org.qbapi.service.impl;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.qbapi.bean.ApiUser;
-import org.qbapi.bean.Dialog;
-import org.qbapi.bean.Session;
+import org.qbapi.bean.QBApiUser;
+import org.qbapi.bean.QBDialog;
+import org.qbapi.bean.QBResponse;
+import org.qbapi.bean.QBSession;
 import org.qbapi.conf.QBConfig;
 import org.qbapi.error.QBException;
 import org.qbapi.service.QBService;
 import org.qbapi.util.*;
 
-import javax.xml.ws.Response;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,7 +24,7 @@ public class QBServiceImpl implements QBService {
 
 	private final static int DIALOG_TYPE_PRIVATE = 3;
 
-	public Session createSession(ApiUser apiUser) throws QBException {
+	public QBSession createSession(QBApiUser apiUser) throws QBException {
 
 		long timestamp = TimeUtil.getUnixTime();
 		double nonce = NumberUtil.randomNonce();
@@ -57,20 +57,32 @@ public class QBServiceImpl implements QBService {
 
 			String responseTxt = HttpUtil.post(getUrl("session"), params);
 
-			return ResponseParser.toSession(responseTxt);
+			QBResponse qbResponse = QBResponse.parse(responseTxt);
+			if (qbResponse.hasErrors()) {
+				qbResponse.throwError();
+			}
+
+			return qbResponse.toSession();
+
+		} catch (IOException e) {
+			throw new QBException(QBException.ERROR_IO, e);
+
+		} catch (JSONException e) {
+			throw new QBException(QBException.ERROR_JSON, e);
 
 		} catch (Exception e) {
-			throw new QBException(QBException.UKNOWN_ERROR);
+			throw new QBException(QBException.ERROR_ENCRYPTION, e);
 		}
 	}
 
-	public Session createUnauthenticatedSession() throws QBException {
+	@Override
+	public QBSession createUnauthenticatedSession() throws QBException {
 		return createSession(null);
 	}
 
 	@Override
-	public ApiUser getApiUserByLogin(String login) throws QBException {
-		Session session = createUnauthenticatedSession();
+	public QBApiUser getApiUserByLogin(String login) throws QBException {
+		QBSession session = createUnauthenticatedSession();
 
 		final Map<String, String> header = new HashMap<>();
 		header.put("QB-Token", session.getToken());
@@ -78,10 +90,18 @@ public class QBServiceImpl implements QBService {
 		try {
 			String responseTxt = HttpUtil.get(getUrl("users/by_login?login=" + login), null, header);
 
-			return ResponseParser.toApiUser(responseTxt);
+			QBResponse qbResponse = QBResponse.parse(responseTxt);
+			if (qbResponse.hasErrors()) {
+				qbResponse.throwError();
+			}
+
+			return qbResponse.toApiUser();
 
 		} catch (IOException e) {
-			throw new QBException(QBException.UKNOWN_ERROR);
+			throw new QBException(QBException.ERROR_IO, e);
+
+		} catch (JSONException e) {
+			throw new QBException(QBException.ERROR_JSON, e);
 		}
 
 	}
@@ -100,13 +120,54 @@ public class QBServiceImpl implements QBService {
 		return url;
 	}
 
-	public Dialog createDialog() {
-		return null;
+	@Override
+	public QBDialog createDialog(QBApiUser owner, QBApiUser recipient, String className, String direction) throws QBException {
+
+		// retrieve the session token for a created session
+		String sessionToken = createSession(owner).getToken();
+
+		try {
+			// prepare the payload for the call
+			JSONObject dialogJson = new JSONObject();
+			dialogJson.put("type", DIALOG_TYPE_PRIVATE);
+			dialogJson.put("occupants_ids", recipient.getId());
+
+			if (!StringUtil.isEmpty(className)) {
+				dialogJson.put("data[class_name]", className);
+			}
+
+			if (!StringUtil.isEmpty(direction)) {
+				dialogJson.put("data[direction]", direction);
+			}
+
+			final Map<String, String> header = new HashMap<>();
+			header.put("QB-Token", sessionToken);
+
+			// execute dialog creation request
+			final String responseTxt = HttpUtil.postJson(getUrl("chat/Dialog"), dialogJson.toString(), header);
+			QBResponse qbResponse = QBResponse.parse(responseTxt);
+			if (qbResponse.hasErrors()) {
+				qbResponse.throwError();
+			}
+
+			return qbResponse.toDialog();
+
+		} catch (JSONException e) {
+			throw new QBException(QBException.ERROR_JSON, e);
+
+		} catch (IOException e) {
+			throw new QBException(QBException.ERROR_IO, e);
+		}
 	}
 
-	public ApiUser registerApiUser(ApiUser apiUser) throws QBException {
+	@Override
+	public QBDialog createDialog(QBApiUser owner, QBApiUser recipient) throws QBException {
+		return createDialog(owner, recipient, null, null);
+	}
 
-		Session session = createUnauthenticatedSession();
+	public QBApiUser registerApiUser(QBApiUser apiUser) throws QBException {
+
+		QBSession session = createUnauthenticatedSession();
 
 		try {
 			final JSONObject userJson = new JSONObject();
@@ -123,53 +184,29 @@ public class QBServiceImpl implements QBService {
 
 			// execute the request
 			final String responseTxt = HttpUtil.postJson(getUrl("users"), jsonPayload.toString(), headers);
+			QBResponse qbResponse = QBResponse.parse(responseTxt);
+			if (qbResponse.hasErrors()) {
+				qbResponse.throwError();
+			}
 
-			ApiUser registeredUser = ResponseParser.toApiUser(responseTxt);
-			registeredUser.setIsRegistered(true);
+			QBApiUser registeredUser = qbResponse.toApiUser();
+			registeredUser.setPassword(apiUser.getPassword());
 
 			return registeredUser;
 
 		} catch (JSONException e) {
-			throw new QBException(QBException.UKNOWN_ERROR);
+			throw new QBException(QBException.ERROR_JSON, e);
 
 		} catch (IOException e) {
-			throw new QBException(QBException.UKNOWN_ERROR);
+			throw new QBException(QBException.ERROR_IO, e);
 		}
-
-		/*
-		final JsonNode responseJson = Json.parse(responseTxt);
-		if (responseJson.has("errors")) {
-			systemLogService.createLog(SystemLogType.DEBUG, "Response has errors...");
-
-			final JsonNode errorsJson = responseJson.get("errors");
-			if (errorsJson.has("login")) {
-				final Iterator<JsonNode> loginErrors = errorsJson.get("login").iterator();
-				while (loginErrors.hasNext()) {
-					final String loginError = loginErrors.next().textValue();
-					if (loginError.equals("has already been taken")) {
-						systemLogService.createLog(SystemLogType.DEBUG, "This user is already registered to QuickBlox. retrieving details...");
-						return getApiUserByLogin(user.getQuickBloxLoginName(), sessionToken);
-					}
-				}
-			}
-		} else {
-			systemLogService.createLog(SystemLogType.DEBUG, "Doesn't have errors...");
-		}
-
-		final JsonNode responseUserJson = responseJson.get("user");
-
-		if (responseUserJson.has("id")) {
-			systemLogService.createLog(SystemLogType.DEBUG, "Returning id = " + responseUserJson.get("id").textValue());
-
-			return responseUserJson.get("id").longValue();
-		}*/
 	}
 
 	@Override
-	public ApiUser deleteApiUser(ApiUser apiUser) throws QBException {
+	public QBApiUser deleteApiUser(QBApiUser apiUser) throws QBException {
 
 		if (apiUser.getId() != null) {
-			Session session = createSession(apiUser);
+			QBSession session = createSession(apiUser);
 			try {
 
 				Map<String, String> headers = new HashMap<>();
@@ -177,16 +214,23 @@ public class QBServiceImpl implements QBService {
 
 				String responseTxt = HttpUtil.delete(getUrl("users/" + apiUser.getId()), headers);
 
-				apiUser.setRawResponse(responseTxt);
+				QBResponse qbResponse = QBResponse.parse(responseTxt);
+				if (qbResponse.hasErrors()) {
+					qbResponse.throwError();
+				}
 
+				apiUser.setId(null);
 				return apiUser;
 
 			} catch (IOException e) {
-				throw new QBException(QBException.UKNOWN_ERROR);
+				throw new QBException(QBException.ERROR_IO, e);
+
+			} catch (JSONException e) {
+				throw new QBException(QBException.ERROR_JSON, e);
 			}
 
 		} else {
-			throw new QBException(QBException.UKNOWN_ERROR);
+			throw new QBException(QBException.ERROR_UNKNOWN);
 		}
 	}
 }
