@@ -229,8 +229,8 @@ public class QBServiceImpl implements QBService {
 				throw new QBException(QBException.ERROR_JSON, e);
 			}
 
-		} else {
-			throw new QBException(QBException.ERROR_UNKNOWN);
 		}
+
+		return null;
 	}
 }

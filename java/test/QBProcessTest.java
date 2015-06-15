@@ -67,86 +67,122 @@ public class QBProcessTest {
 	}
 
 	@Test
-	public void createApiUser() throws QBException {
-		_logger.info("Testing creation of API User []");
+	public void createApiUser() {
+		_logger.info("Creating test api user...");
 
-		QBApiUser apiUser = qbService.registerApiUser(testApiUser);
+		try {
+			QBApiUser apiUser = qbService.registerApiUser(testApiUser);
+			_logger.info("Successfully created new User");
+			_logger.info("User: " + apiUser.getRawInfo());
 
-		_logger.info("Successfully created new User");
-		_logger.info("User: " + apiUser.getRawInfo());
+			Assert.assertNotNull(apiUser.getId());
+		} catch (QBException e) {
 
-		testApiUser.setId(apiUser.getId());
+			if (e.getErrorCode() == QBException.ERROR_API) {
+				_logger.warning("API ERROR: " + e.getRawResponse());
+			} else {
+				_logger.warning("Exception occurred." + e.getMessage());
+			}
 
-		Assert.assertNotNull(apiUser.getId());
-	}
-
-	@Test
-	public void requestAuthenticatedSession() throws QBException {
-		_logger.info("Testing creation of authenticated Session ");
-
-		QBSession session = qbService.createSession(testApiUser);
-
-		_logger.info("Session successfully created. ");
-		_logger.info("Session: " + session.getRawInfo());
-
-		Assert.assertNotNull(session.getId());
-		Assert.assertNotNull(session.getToken());
-	}
-
-	@Test
-	public void deleteApiUser() throws QBException {
-		_logger.info("Testing deletion of API User");
-		_logger.info("Fetching API User to delete...");
-
-		QBApiUser existingUser = qbService.getApiUserByLogin(testApiUser.getLogin());
-		_logger.info("Fetched user: " + existingUser.getRawInfo());
-
-		if (existingUser.getId() != null) {
-			testApiUser.setId(existingUser.getId());
-
-			QBApiUser apiUser = qbService.deleteApiUser(existingUser);
-
-			Assert.assertFalse(apiUser.isRegistered());
-		} else {
-			_logger.warning("Test API User can not be found. No test will be done.");
+			Assert.fail();
 		}
 	}
 
-	//Raw INFO: {"_id":"5579ee076390d8dab2013233","created_at":"2015-06-11T20:22:31Z","last_message":null,"last_message_date_sent":null,"last_message_user_id":null,"name":null,"occupants_ids":[3491007,3491096],"photo":null,"type":3,"user_id":3491096,"xmpp_room_jid":null,"unread_messages_count":null}
+	@Test
+	public void requestAuthenticatedSession() {
+		_logger.info("Testing creation of authenticated Session ");
+
+		try {
+			QBSession session = qbService.createSession(testApiUser);
+
+			_logger.info("Session successfully created. ");
+			_logger.info("Session: " + session.getRawInfo());
+
+			Assert.assertNotNull(session.getId());
+			Assert.assertNotNull(session.getToken());
+		} catch (QBException e) {
+			if (e.getErrorCode() == QBException.ERROR_API) {
+				_logger.warning("API ERROR: " + e.getRawResponse());
+			} else {
+				_logger.warning("Exception occurred." + e.getMessage());
+			}
+
+			Assert.fail();
+		}
+	}
+
+	@Test
+	public void deleteApiUser() {
+		_logger.info("Testing deletion of API User");
+		_logger.info("Fetching API User to delete...");
+
+		try {
+			QBApiUser existingUser = qbService.getApiUserByLogin(testApiUser.getLogin());
+			_logger.info("Fetched user: " + existingUser.getRawInfo());
+
+			if (existingUser.getId() != null) {
+				testApiUser.setId(existingUser.getId());
+
+				QBApiUser apiUser = qbService.deleteApiUser(existingUser);
+
+				Assert.assertFalse(apiUser.isRegistered());
+			} else {
+				Assert.fail("Test API User can not be found. No test will be done.");
+			}
+		} catch (QBException e) {
+			if (e.getErrorCode() == QBException.ERROR_API) {
+				_logger.warning("API ERROR: " + e.getRawResponse());
+			} else {
+				_logger.warning("Exception occurred." + e.getMessage());
+			}
+
+			Assert.fail();
+		}
+	}
+
 	@Test
 	public void createDialog() throws QBException {
 		_logger.info("Testing creation of Dialog");
 
-		_logger.info("Resolving 2 api users for dialog");
-		QBApiUser apiUser1 = qbService.getApiUserByLogin(dialogOwner.getLogin());
-		if (apiUser1 == null) {
-			_logger.info("Registering dialog owner as api user...");
-			apiUser1 = qbService.registerApiUser(dialogOwner);
+		try {
+			_logger.info("Resolving 2 api users for dialog");
+			QBApiUser apiUser1 = qbService.getApiUserByLogin(dialogOwner.getLogin());
+			if (apiUser1 == null) {
+				_logger.info("Registering dialog owner as api user...");
+				apiUser1 = qbService.registerApiUser(dialogOwner);
 
-			_logger.info("Successfully registered. Owner: " + apiUser1.getRawInfo());
-		} else {
-			apiUser1.setPassword(dialogOwner.getPassword());
+				_logger.info("Successfully registered. Owner: " + apiUser1.getRawInfo());
+			} else {
+				apiUser1.setPassword(dialogOwner.getPassword());
+			}
+
+			QBApiUser apiUser2 = qbService.getApiUserByLogin(dialogRecipient.getLogin());
+			if (apiUser2 == null) {
+				_logger.info("Registering dialog recipient as api user...");
+
+				apiUser2 = qbService.registerApiUser(dialogRecipient);
+
+				_logger.info("Successfully registered. Recipient: " + apiUser1.getRawInfo());
+			} else {
+				apiUser2.setPassword(dialogRecipient.getPassword());
+			}
+
+			if (apiUser1.isRegistered() && apiUser2.isRegistered()) {
+				QBDialog dialog = qbService.createDialog(apiUser1, apiUser2, "clasname", "owner -> recipient");
+
+				_logger.info("Dialog created. Raw info: " + dialog.getRawInfo());
+
+			} else {
+				_logger.warning("Unable to create api users... skipping dialog creation tests... ");
+			}
+		} catch (QBException e) {
+			if (e.getErrorCode() == QBException.ERROR_API) {
+				_logger.warning("API ERROR: " + e.getRawResponse());
+			} else {
+				_logger.warning("Exception occurred." + e.getMessage());
+			}
+
+			Assert.fail();
 		}
-
-		QBApiUser apiUser2 = qbService.getApiUserByLogin(dialogRecipient.getLogin());
-		if (apiUser2 == null) {
-			_logger.info("Registering dialog recipient as api user...");
-
-			apiUser2 = qbService.registerApiUser(dialogRecipient);
-
-			_logger.info("Successfully registered. Recipient: " + apiUser1.getRawInfo());
-		} else {
-			apiUser2.setPassword(dialogRecipient.getPassword());
-		}
-
-		if (apiUser1.isRegistered() && apiUser2.isRegistered()) {
-			QBDialog dialog = qbService.createDialog(apiUser1, apiUser2, "clasname", "owner -> recipient");
-
-			_logger.info("Dialog created. Raw info: " + dialog.getRawInfo());
-
-		} else {
-			_logger.warning("Unable to create api users... skipping dialog creation tests... ");
-		}
-
 	}
 }

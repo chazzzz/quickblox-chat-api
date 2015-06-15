@@ -115,6 +115,6 @@ public class QBResponse {
 	}
 
 	public void throwError() throws QBException {
-		throw new QBException(QBException.ERROR_GENERIC);
+		throw new QBException(QBException.ERROR_API, rawResponseTxt);
 	}
 }
