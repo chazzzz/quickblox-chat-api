@@ -19,6 +19,7 @@ import java.util.*;
  * Created by chazz on 6/10/2015.
  */
 public class HttpUtil {
+
 	public static final String METHOD_GET = "GET";
 	public static final String METHOD_POST = "POST";
 	public static final String METHOD_DELETE = "DELETE";
@@ -32,7 +33,7 @@ public class HttpUtil {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String get(String url, Map<String, String> params) throws IOException {
+	public static HttpResponse get(String url, Map<String, String> params) throws IOException {
 		return HttpUtil.sendRequest(METHOD_GET, url, params, null);
 	}
 
@@ -44,7 +45,7 @@ public class HttpUtil {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String get(String url, Map<String, String> params, Map<String, String> header) throws IOException {
+	public static HttpResponse get(String url, Map<String, String> params, Map<String, String> header) throws IOException {
 		return HttpUtil.sendRequest(METHOD_GET, url, params, header);
 	}
 
@@ -56,7 +57,7 @@ public class HttpUtil {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String post (String url, Map<String, String> params) throws IOException {
+	public static HttpResponse post (String url, Map<String, String> params) throws IOException {
 		return HttpUtil.sendRequest(METHOD_POST, url, params, null);
 	}
 
@@ -68,7 +69,7 @@ public class HttpUtil {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String post(String url, Map<String, String> headers, Map<String, String> params) throws ClientProtocolException, IOException {
+	public static HttpResponse post(String url, Map<String, String> headers, Map<String, String> params) throws ClientProtocolException, IOException {
 		return HttpUtil.sendRequest(METHOD_POST, url, params, headers);
 	}
 
@@ -82,7 +83,7 @@ public class HttpUtil {
 	 * @return
 	 * @throws IOException
 	 */
-	private static String sendRequest(String method, String requestUrl, Map<String, String> params, Map<String, String> headers) throws IOException {
+	private static HttpResponse sendRequest(String method, String requestUrl, Map<String, String> params, Map<String, String> headers) throws IOException {
 
 		CloseableHttpClient httpClient = HttpClients.createDefault();
 
@@ -139,14 +140,7 @@ public class HttpUtil {
 			}
 		}
 
-		final HttpResponse response = httpClient.execute(request);
-		final InputStream inStream = response.getEntity().getContent();
-
-		final String responseTxt = convertStreamToString(inStream);
-
-		inStream.close();
-
-		return responseTxt;
+		return httpClient.execute(request);
 	}
 
 	private static String convertStreamToString(InputStream inputStream) {
@@ -157,9 +151,9 @@ public class HttpUtil {
 		}
 	}
 
-	public static final String postJson(String url, String jsonData, Map<String, String> headers) throws IOException {
-		final HttpPost httpPost = new HttpPost(url);
-		final StringEntity entity = new StringEntity(jsonData, "UTF-8");
+	public static HttpResponse postJson(String url, String jsonData, Map<String, String> headers) throws IOException {
+		HttpPost httpPost = new HttpPost(url);
+		StringEntity entity = new StringEntity(jsonData, "UTF-8");
 		entity.setContentType("application/json");
 
 		httpPost.setEntity(entity);
@@ -168,17 +162,15 @@ public class HttpUtil {
 			httpPost.addHeader(new BasicHeader(key, headers.get(key)));
 		}
 
-		final CloseableHttpClient client = HttpClients.createDefault();
-		final InputStream inStream = client.execute(httpPost).getEntity().getContent();
-		final String responseTxt = convertStreamToString(inStream);
-
-
-		inStream.close();
-
-		return responseTxt;
+		CloseableHttpClient client = HttpClients.createDefault();
+		return client.execute(httpPost);
 	}
 
-    public static String delete(String url, Map<String, String> headers) throws IOException {
+    public static HttpResponse delete(String url, Map<String, String> headers) throws IOException {
         return sendRequest(METHOD_DELETE, url, null, headers);
     }
+
+	public static String getContent(HttpResponse httpResponse) throws IOException {
+		return convertStreamToString(httpResponse.getEntity().getContent());
+	}
 }

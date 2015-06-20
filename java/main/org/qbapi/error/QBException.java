@@ -1,5 +1,10 @@
 package org.qbapi.error;
 
+import org.qbapi.bean.QBError;
+
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Created by chazz on 6/10/2015.
  */
@@ -7,7 +12,6 @@ public class QBException extends Exception {
 
     public static final int ERROR_UNKNOWN = 0;
 	public static final int ERROR_JSON = 1;
-	public static final int ERROR_GENERIC = 2;
 	public static final int ERROR_IO = 4;
 	public static final int ERROR_ENCRYPTION = 5;
 	public static final int ERROR_API = 6;
@@ -15,6 +19,8 @@ public class QBException extends Exception {
 	private Exception rootException;
 
 	private String rawResponse;
+
+	private List<QBError> errors = new ArrayList<>();
 
 	private int errorCode;
 
@@ -43,8 +49,10 @@ public class QBException extends Exception {
 	}
 
 	public void setErrorCode(int errorCode) {
-
-
         this.errorCode = errorCode;
     }
+
+	public void addError(QBError error) {
+		this.errors.add(error);
+	}
 }

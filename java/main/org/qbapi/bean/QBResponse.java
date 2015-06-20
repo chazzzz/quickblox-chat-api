@@ -1,14 +1,18 @@
 package org.qbapi.bean;
 
+import org.apache.http.HttpResponse;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.qbapi.error.QBException;
+import org.qbapi.util.HttpUtil;
 
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Iterator;
 
 /**
  * Created by chazz on 6/10/2015.
@@ -31,23 +35,26 @@ public class QBResponse {
 	private final static String ATTR_USER = "user";
 	private final static String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
-	private String rawResponseTxt;
+	private HttpResponse httpResponse;
+
+	private String responseTxt;
 
 	private JSONObject jsonResponse;
 
-	public static final QBResponse parse(String rawResponseTxt) throws JSONException {
-		return new QBResponse(rawResponseTxt);
+	public static final QBResponse parse(HttpResponse httpResponse) throws IOException, JSONException {
+		return new QBResponse(httpResponse);
 	}
 
-	private QBResponse(String rawResponseTxt) throws JSONException {
-		this.rawResponseTxt = rawResponseTxt;
+	private QBResponse(HttpResponse httpResponse) throws IOException, JSONException {
+		this.httpResponse = httpResponse;
+		this.responseTxt = HttpUtil.getContent(httpResponse);
 
-		jsonResponse = new JSONObject(rawResponseTxt);
+		jsonResponse = new JSONObject();
 	}
 
 	public QBDialog toDialog() throws JSONException {
 	    QBDialog dialog = new QBDialog();
-	    dialog.setRawInfo(rawResponseTxt);
+	    dialog.setRawInfo(responseTxt);
 
 		dialog.setCreatedAt(parseDate(jsonResponse.getString(ATTR_CREATED_AT)));
 	    dialog.setUpdatedAt(parseDate(jsonResponse.getString(ATTR_UPDATED_AT)));
@@ -64,7 +71,7 @@ public class QBResponse {
 
 	public QBApiUser toApiUser() throws JSONException {
 		QBApiUser apiUser = new QBApiUser();
-		apiUser.setRawInfo(rawResponseTxt);
+		apiUser.setRawInfo(this.responseTxt);
 
         JSONObject userJson = jsonResponse.getJSONObject(ATTR_USER);
         apiUser.setEmail(userJson.getString(ATTR_EMAIL));
@@ -79,7 +86,7 @@ public class QBResponse {
 
 	public QBSession toSession() throws JSONException {
 		QBSession session = new QBSession();
-		session.setRawInfo(rawResponseTxt);
+		session.setRawInfo(this.responseTxt);
 
 		JSONObject sessionJson = jsonResponse.getJSONObject(ATTR_SESSION);
 		session.setApplicationId(sessionJson.getLong(ATTR_APPLICATION_ID));
@@ -93,7 +100,12 @@ public class QBResponse {
 	}
 
 	public boolean hasErrors() {
-		return jsonResponse.has("errors");
+		int statusCode = httpResponse.getStatusLine().getStatusCode();
+		return  statusCode == 402 ||
+				statusCode == 422 ||
+				statusCode == 404 ||
+				statusCode == 400 ||
+				jsonResponse.has("errors");
 	}
 
 	private Date parseDate(String dateStr) {
@@ -106,15 +118,28 @@ public class QBResponse {
 		}
 	}
 
-	public String getRawResponseTxt() {
-		return rawResponseTxt;
-	}
-
-	public void setRawResponseTxt(String rawResponseTxt) {
-		this.rawResponseTxt = rawResponseTxt;
-	}
-
 	public void throwError() throws QBException {
-		throw new QBException(QBException.ERROR_API, rawResponseTxt);
+		QBException qbException = new QBException(QBException.ERROR_API, this.responseTxt);
+
+		try {
+			JSONObject errorsJson = jsonResponse.getJSONObject("errors");
+			Iterator keys = errorsJson.keys();
+			while (keys.hasNext()) {
+				String key = keys.next() + "";
+				QBError qbError = new QBError();
+				qbError.setField(key);
+
+				JSONArray messagesJson = errorsJson.getJSONArray(key);
+				for (int i = 0; i < messagesJson.length(); i++) {
+					qbError.addMessage(messagesJson.getString(i));
+				}
+
+				qbException.addError(qbError);
+			}
+			throw qbException;
+
+		} catch (JSONException e) {
+			throw qbException;
+		}
 	}
 }

@@ -21,7 +21,17 @@ public class QBSession {
 
     private Date updatedAt;
 
-    public void setRawInfo(String rawInfo) {
+	private Date expirationDate;
+
+	public Date getExpirationDate() {
+		return expirationDate;
+	}
+
+	public void setExpirationDate(Date expirationDate) {
+		this.expirationDate = expirationDate;
+	}
+
+	public void setRawInfo(String rawInfo) {
         this.rawInfo = rawInfo;
     }
 

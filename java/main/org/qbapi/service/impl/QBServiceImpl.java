@@ -1,5 +1,6 @@
 package org.qbapi.service.impl;
 
+import org.apache.http.HttpResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.qbapi.bean.QBApiUser;
@@ -55,9 +56,9 @@ public class QBServiceImpl implements QBService {
 			String signature = EncryptionUtil.encryptHmac(signatureBody.toString(), QBConfig.AUTH_SECRET);
 			params.put("signature", signature);
 
-			String responseTxt = HttpUtil.post(getUrl("session"), params);
+			HttpResponse response = HttpUtil.post(getUrl("session"), params);
 
-			QBResponse qbResponse = QBResponse.parse(responseTxt);
+			QBResponse qbResponse = QBResponse.parse(HttpUtil.getContent(response));
 			if (qbResponse.hasErrors()) {
 				qbResponse.throwError();
 			}
@@ -88,9 +89,9 @@ public class QBServiceImpl implements QBService {
 		header.put("QB-Token", session.getToken());
 
 		try {
-			String responseTxt = HttpUtil.get(getUrl("users/by_login?login=" + login), null, header);
+			HttpResponse httpResponse = HttpUtil.get(getUrl("users/by_login?login=" + login), null, header);
 
-			QBResponse qbResponse = QBResponse.parse(responseTxt);
+			QBResponse qbResponse = QBResponse.parse(httpResponse.getStatusLine().getStatusCode(), HttpUtil.getContent(httpResponse));
 			if (qbResponse.hasErrors()) {
 				qbResponse.throwError();
 			}

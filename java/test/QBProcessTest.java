@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 /**
  * Created by chazz on 6/10/2015.
  */
-@FixMethodOrder(MethodSorters.DEFAULT)
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class QBProcessTest {
 
 	private QBApiUser testApiUser;
