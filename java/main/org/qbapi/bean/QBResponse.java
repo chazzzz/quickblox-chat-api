@@ -33,7 +33,14 @@ public class QBResponse {
 	private final static String ATTR_USER_ID = "user_id";
 	private final static String ATTR_SESSION = "session";
 	private final static String ATTR_USER = "user";
+	private final static String ATTR_API_ENDPOINT = "api_endpoint";
+	private final static String ATTR_ACCOUNT_ID = "account_id";
+	private final static String ATTR_CHAT_ENDPOINT = "chat_endpoint";
+	private final static String ATTR_TURNSERVER_ENDPOINT = "turnserver.quickblox.com";
+	private final static String ATTR_S3_BUCKET = "s3_bucket_name";
+
 	private final static String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+
 
 	private HttpResponse httpResponse;
 
@@ -99,12 +106,22 @@ public class QBResponse {
 		return session;
 	}
 
+	public QBAccountSettings toAccountSettings() throws JSONException {
+		QBAccountSettings accountSettings = new QBAccountSettings();
+		accountSettings.setAccountId(jsonResponse.getInt(ATTR_ACCOUNT_ID));
+		accountSettings.setApiEndpoint(jsonResponse.getString(ATTR_API_ENDPOINT));
+		accountSettings.setTurnServerEndpoint(jsonResponse.getString(ATTR_TURNSERVER_ENDPOINT));
+		accountSettings.setChatEndpoint(jsonResponse.getString(ATTR_CHAT_ENDPOINT));
+
+		return accountSettings;
+	}
+
 	public boolean hasErrors() {
 		int statusCode = httpResponse.getStatusLine().getStatusCode();
-		return  statusCode == 402 ||
-				statusCode == 422 ||
-				statusCode == 404 ||
-				statusCode == 400 ||
+		return  statusCode == QBException.ERROR_UNAUTHORIZED ||
+				statusCode == QBException.ERROR_UNPROCESSABLE_ENTRY ||
+				statusCode == QBException.ERROR_NOT_FOUND ||
+				statusCode == QBException.ERROR_BAD_REQUEST ||
 				jsonResponse.has("errors");
 	}
 
@@ -142,4 +159,5 @@ public class QBResponse {
 			throw qbException;
 		}
 	}
+
 }

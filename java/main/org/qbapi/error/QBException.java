@@ -15,6 +15,10 @@ public class QBException extends Exception {
 	public static final int ERROR_IO = 4;
 	public static final int ERROR_ENCRYPTION = 5;
 	public static final int ERROR_API = 6;
+	public static final int ERROR_UNAUTHORIZED = 401;
+	public static final int ERROR_UNPROCESSABLE_ENTRY = 422;
+	public static final int ERROR_NOT_FOUND = 404;
+	public static final int ERROR_BAD_REQUEST = 400;
 
 	private Exception rootException;
 

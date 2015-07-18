@@ -3,10 +3,7 @@ package org.qbapi.service.impl;
 import org.apache.http.HttpResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.qbapi.bean.QBApiUser;
-import org.qbapi.bean.QBDialog;
-import org.qbapi.bean.QBResponse;
-import org.qbapi.bean.QBSession;
+import org.qbapi.bean.*;
 import org.qbapi.conf.QBConfig;
 import org.qbapi.error.QBException;
 import org.qbapi.service.QBService;
@@ -24,6 +21,30 @@ public class QBServiceImpl implements QBService {
 	private final static String API_ENDPOINT = "https://api.quickblox.com/";
 
 	private final static int DIALOG_TYPE_PRIVATE = 3;
+
+	private final static String ACCOUNT_SETTINGS_ENDPOINT = "https://api.quickblox.com/account_settings.json";
+
+	public QBAccountSettings getAccountSettings()  {
+		Map<String, String> headers = new HashMap<>();
+		headers.put("QuickBlox-REST-API-Version", "0.1.1");
+		headers.put("QB-Account-Key", "7yvNe17TnjNUqDoPwfqp");
+
+		try {
+			HttpResponse httpResponse = HttpUtil.get(ACCOUNT_SETTINGS_ENDPOINT, null, headers);
+			QBResponse qbResponse = QBResponse.parse(httpResponse);
+			qbResponse.
+
+
+		} catch (IOException e) {
+
+		} catch (JSONException e) {
+
+		}
+
+
+
+		return new QBAccountSettings();
+	}
 
 	public QBSession createSession(QBApiUser apiUser) throws QBException {
 
@@ -56,9 +77,7 @@ public class QBServiceImpl implements QBService {
 			String signature = EncryptionUtil.encryptHmac(signatureBody.toString(), QBConfig.AUTH_SECRET);
 			params.put("signature", signature);
 
-			HttpResponse response = HttpUtil.post(getUrl("session"), params);
-
-			QBResponse qbResponse = QBResponse.parse(HttpUtil.getContent(response));
+			QBResponse qbResponse = QBResponse.parse(HttpUtil.post(getUrl("session"), params));
 			if (qbResponse.hasErrors()) {
 				qbResponse.throwError();
 			}
@@ -82,16 +101,14 @@ public class QBServiceImpl implements QBService {
 	}
 
 	@Override
-	public QBApiUser getApiUserByLogin(String login) throws QBException {
-		QBSession session = createUnauthenticatedSession();
-
+	public QBApiUser getApiUserByLogin(QBSession session, String login) throws QBException {
 		final Map<String, String> header = new HashMap<>();
 		header.put("QB-Token", session.getToken());
 
 		try {
 			HttpResponse httpResponse = HttpUtil.get(getUrl("users/by_login?login=" + login), null, header);
 
-			QBResponse qbResponse = QBResponse.parse(httpResponse.getStatusLine().getStatusCode(), HttpUtil.getContent(httpResponse));
+			QBResponse qbResponse = QBResponse.parse(httpResponse);
 			if (qbResponse.hasErrors()) {
 				qbResponse.throwError();
 			}
@@ -105,20 +122,6 @@ public class QBServiceImpl implements QBService {
 			throw new QBException(QBException.ERROR_JSON, e);
 		}
 
-	}
-
-	private String getUrl(String resource) {
-		final String[] urlResource = resource.split("\\?");
-		String urlParams = "";
-
-		if(urlResource.length > 1) {
-			urlParams = "?" + urlResource[1];
-			resource = urlResource[0];
-		}
-
-		final String url = API_ENDPOINT + resource + ".json" + urlParams;
-
-		return url;
 	}
 
 	@Override
